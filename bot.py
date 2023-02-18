@@ -5,7 +5,7 @@ from discord.ext import commands
 from discord import FFmpegPCMAudio
 import responses
 import youtubeSearch as YT
-import youtube_dl
+import yt_dlp
 
 async def send_message(message, user_message, is_private = False):
     try:
@@ -23,9 +23,9 @@ def run_discord_bot():
 
     @client.event
     async def on_ready():
-        print('------------------------------')
-        print(f'{client.user} is now running!')
-        print('------------------------------')
+        print('-----------------------------------')
+        print(f'{client.user} is up and running')
+        print('-----------------------------------')
 
     @client.command(name='play', aliases=['p'], pass_context = True)
     async def play(ctx, *, search_term:str = None):
@@ -41,11 +41,13 @@ def run_discord_bot():
                 voice = ctx.guild.voice_client
             
             url = YT.singleSearch(search_term)
-            server = ctx.message.server
-            voice_client = client.voice_clients(server)
-            player = await voice_client.
+            
+            yt_dlp_opts = {'format': 'bestaudio'}
+            with yt_dlp.YoutubeDL(yt_dlp_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                playUrl = info['url']
 
-            source = FFmpegPCMAudio('song.mp3')
+            source = FFmpegPCMAudio(playUrl)
             voice.play(source)
         else:
             await ctx.send('You must be in a voice channel to play a song!')
