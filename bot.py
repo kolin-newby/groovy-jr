@@ -2,7 +2,7 @@ import os
 
 import discord
 from discord.ext import commands
-from discord import FFmpegPCMAudio
+from discord import FFmpegOpusAudio
 import responses
 import youtubeSearch as YT
 import yt_dlp
@@ -43,11 +43,12 @@ def run_discord_bot():
             url = YT.singleSearch(search_term)
             
             yt_dlp_opts = {'format': 'bestaudio'}
+            ffmpeg_options = {'options': '-vn -loglevel repeat+level+debug', "before_options": "-reconnect 100 -reconnect_streamed 100 -reconnect_delay_max 1000"}
             with yt_dlp.YoutubeDL(yt_dlp_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 playUrl = info['url']
 
-            source = FFmpegPCMAudio(playUrl)
+            source = FFmpegOpusAudio(playUrl, options=ffmpeg_options)
             voice.play(source)
         else:
             await ctx.send('You must be in a voice channel to play a song!')
