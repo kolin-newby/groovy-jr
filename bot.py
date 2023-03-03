@@ -238,7 +238,7 @@ class VoiceState:
                 # the player will disconnect due to performance
                 # reasons.
                 try:
-                    async with timeout(3):  # 4 minutes
+                    async with timeout(300):  # 5 minutes
                         self.current = await self.songs.get()
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.stop(timeout=True))
@@ -266,7 +266,7 @@ class VoiceState:
         self.songs.clear()
 
         if timeout:
-            source = discord.FFmpegPCMAudio(source='./dc_sound.mp3')
+            source = discord.FFmpegPCMAudio(source='./groovy-jr/dc_sound.mp3')
             self.voice.play(source)
             time.sleep(2.7)
 
