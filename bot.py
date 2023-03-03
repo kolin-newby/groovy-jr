@@ -18,6 +18,7 @@ import itertools
 import math
 import random
 import os
+import time
 
 import discord
 import yt_dlp as youtube_dl
@@ -238,10 +239,10 @@ class VoiceState:
                 # the player will disconnect due to performance
                 # reasons.
                 try:
-                    async with timeout(180):  # 3 minutes
+                    async with timeout(3):  # 4 minutes
                         self.current = await self.songs.get()
                 except asyncio.TimeoutError:
-                    self.bot.loop.create_task(self.stop())
+                    self.bot.loop.create_task(self.stop(timeout=True))
                     return
 
             self.current.source.volume = self._volume
@@ -262,8 +263,13 @@ class VoiceState:
         if self.is_playing:
             self.voice.stop()
 
-    async def stop(self):
+    async def stop(self, timeout = False):
         self.songs.clear()
+
+        if timeout:
+            source = discord.FFmpegPCMAudio(source='./dc_sound.mp3')
+            self.voice.play(source)
+            time.sleep(2.7)
 
         if self.voice:
             await self.voice.disconnect()
@@ -310,25 +316,7 @@ class Music(commands.Cog):
 
         ctx.voice_state.voice = await destination.connect()
 
-    @commands.command(name='summon')
-    @commands.has_permissions(manage_guild=True)
-    async def _summon(self, ctx: commands.Context, *, channel: discord.VoiceChannel = None):
-        """Summons the bot to a voice channel.
-        If no channel was specified, it joins your channel.
-        """
-
-        if not channel and not ctx.author.voice:
-            raise VoiceError('You are neither connected to a voice channel nor specified a channel to join.')
-
-        destination = channel or ctx.author.voice.channel
-        if ctx.voice_state.voice:
-            await ctx.voice_state.voice.move_to(destination)
-            return
-
-        ctx.voice_state.voice = await destination.connect()
-
     @commands.command(name='leave', aliases=['disconnect'])
-    @commands.has_permissions(manage_guild=True)
     async def _leave(self, ctx: commands.Context):
         """Clears the queue and leaves the voice channel."""
 
@@ -338,21 +326,8 @@ class Music(commands.Cog):
         await ctx.voice_state.stop()
         del self.voice_states[ctx.guild.id]
 
-    @commands.command(name='volume')
-    async def _volume(self, ctx: commands.Context, *, volume: int):
-        """Sets the volume of the player."""
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.send('Nothing being played at the moment.')
-
-        if 0 > volume > 100:
-            return await ctx.send('Volume must be between 0 and 100')
-
-        ctx.voice_state.volume = volume / 100
-        await ctx.send('Volume of the player set to {}%'.format(volume))
-
-    @commands.command(name='now', aliases=['current', 'playing'])
-    async def _now(self, ctx: commands.Context):
+    @commands.command(name='info', aliases=['current', 'playing'])
+    async def _info(self, ctx: commands.Context):
         """Displays the currently playing song."""
 
         await ctx.send(embed=ctx.voice_state.current.create_embed())
@@ -361,7 +336,7 @@ class Music(commands.Cog):
     async def _pause(self, ctx: commands.Context):
         """Pauses the currently playing song."""
 
-        if not ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
+        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
             await ctx.message.add_reaction('⏯')
 
@@ -369,7 +344,7 @@ class Music(commands.Cog):
     async def _resume(self, ctx: commands.Context):
         """Resumes a currently paused song."""
 
-        if not ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
+        if ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
             await ctx.message.add_reaction('⏯')
 
@@ -379,8 +354,7 @@ class Music(commands.Cog):
 
         ctx.voice_state.songs.clear()
 
-        if not ctx.voice_state.is_playing:
-            print("********************here!")
+        if ctx.voice_state.is_playing:
             ctx.voice_state.voice.stop()
             await ctx.message.add_reaction('⏹')
 
@@ -454,26 +428,9 @@ class Music(commands.Cog):
         ctx.voice_state.songs.remove(index - 1)
         await ctx.message.add_reaction('✅')
 
-    @commands.command(name='loop')
-    async def _loop(self, ctx: commands.Context):
-        """Loops the currently playing song.
-        Invoke this command again to unloop the song.
-        """
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.send('Nothing being played at the moment.')
-
-        # Inverse boolean value to loop and unloop.
-        ctx.voice_state.loop = not ctx.voice_state.loop
-        await ctx.message.add_reaction('✅')
-
     @commands.command(name='play')
     async def _play(self, ctx: commands.Context, *, search: str):
-        """Plays a song.
-        If there are songs in the queue, this will be queued until the
-        other songs finished playing.
-        This command automatically searches from various sites if no URL is provided.
-        A list of these sites can be found here: https://rg3.github.io/youtube-dl/supportedsites.html
+        """Plays a song. Searches if no URL is given.
         """
 
         if not ctx.voice_state.voice:
@@ -501,7 +458,7 @@ class Music(commands.Cog):
                 raise commands.CommandError('Bot is already in a voice channel.')   
 
 
-bot = commands.Bot(description='Yet another music bot.', command_prefix='-')
+bot = commands.Bot(description='A custom music bot for your listening enjoyment, in loving memory of Trent', command_prefix='-')
 bot.add_cog(Music(bot))
 
 
