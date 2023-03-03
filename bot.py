@@ -10,7 +10,6 @@ You also need FFmpeg in your PATH environment variable or the FFmpeg.exe binary 
 """
 
 from discord import FFmpegPCMAudio
-import youtubeSearch as YT
 
 import asyncio
 import functools
